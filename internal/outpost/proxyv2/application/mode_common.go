@@ -90,11 +90,11 @@ func (a *Application) getTraefikForwardUrl(r *http.Request) (*url.URL, error) {
 func (a *Application) getNginxForwardUrl(r *http.Request) (*url.URL, error) {
 	ou := r.Header.Get("X-Original-URI")
 	if ou != "" {
-		// Turn this full URL into a relative URL
-		u := &url.URL{
-			Host:   "",
-			Scheme: "",
-			Path:   ou,
+		// Parse the full URI to get path and query parameters
+		u, err := url.Parse(ou)
+		if err != nil {
+			a.log.WithError(err).Warning("failed to parse X-Original-URI")
+			return nil, err
 		}
 		a.log.WithField("url", u.String()).Info("building forward URL from X-Original-URI")
 		return u, nil
@@ -131,7 +131,7 @@ func (a *Application) IsAllowlisted(u *url.URL) bool {
 	for _, ur := range a.UnauthenticatedRegex {
 		var testString string
 		if a.Mode() == api.PROXYMODE_PROXY || a.Mode() == api.PROXYMODE_FORWARD_SINGLE {
-			testString = u.Path
+			testString = u.RequestURI()
 		} else {
 			testString = u.String()
 		}
